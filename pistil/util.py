@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of gunicorn released under the MIT license. 
+# This file is part of gunicorn released under the MIT license.
 # See the NOTICE for more information.
 
 
@@ -27,9 +27,9 @@ import time
 
 MAXFD = 1024
 if (hasattr(os, "devnull")):
-   REDIRECT_TO = os.devnull
+    REDIRECT_TO = os.devnull
 else:
-   REDIRECT_TO = "/dev/null"
+    REDIRECT_TO = "/dev/null"
 
 timeout_default = object()
 
@@ -55,21 +55,23 @@ hop_headers = set("""
     te trailers transfer-encoding upgrade
     server date
     """.split())
-            
+
 try:
     from setproctitle import setproctitle
+
     def _setproctitle(title):
-        setproctitle(title) 
+        setproctitle(title)
 except ImportError:
     def _setproctitle(title):
         return
+
 
 def load_worker_class(uri):
     if uri.startswith("egg:"):
         # uses entry points
         entry_str = uri.split("egg:")[1]
         try:
-            dist, name = entry_str.rsplit("#",1)
+            dist, name = entry_str.rsplit("#", 1)
         except ValueError:
             dist = entry_str
             name = "sync"
@@ -81,9 +83,9 @@ def load_worker_class(uri):
             try:
                 if uri.startswith("#"):
                     uri = uri[1:]
-                return pkg_resources.load_entry_point("gunicorn", 
-                            "gunicorn.workers", uri)
-            except ImportError: 
+                return pkg_resources.load_entry_point("gunicorn",
+                                                      "gunicorn.workers", uri)
+            except ImportError:
                 raise RuntimeError("arbiter uri invalid or not found")
         klass = components.pop(-1)
         mod = __import__('.'.join(components))
@@ -91,7 +93,8 @@ def load_worker_class(uri):
             mod = getattr(mod, comp)
         return getattr(mod, klass)
 
-def set_owner_process(uid,gid):
+
+def set_owner_process(uid, gid):
     """ set user and group of workers processes """
     if gid:
         try:
@@ -102,10 +105,11 @@ def set_owner_process(uid,gid):
             # versions of python < 2.6.2 don't manage unsigned int for
             # groups like on osx or fedora
             os.setgid(-ctypes.c_int(-gid).value)
-            
+
     if uid:
         os.setuid(uid)
-        
+
+
 def chown(path, uid, gid):
     try:
         os.chown(path, uid, gid)
@@ -118,10 +122,11 @@ def chown(path, uid, gid):
 def is_ipv6(addr):
     try:
         socket.inet_pton(socket.AF_INET6, addr)
-    except socket.error: # not a valid address
+    except socket.error:  # not a valid address
         return False
     return True
-        
+
+
 def parse_address(netloc, default_port=8000):
     if isinstance(netloc, tuple):
         return netloc
@@ -138,8 +143,8 @@ def parse_address(netloc, default_port=8000):
         host = "0.0.0.0"
     else:
         host = netloc.lower()
-    
-    #get port
+
+    # get port
     netloc = netloc.split(']')[-1]
     if ":" in netloc:
         port = netloc.split(':', 1)[1]
@@ -147,23 +152,27 @@ def parse_address(netloc, default_port=8000):
             raise RuntimeError("%r is not a valid port number." % port)
         port = int(port)
     else:
-        port = default_port 
+        port = default_port
     return (host, port)
-    
+
+
 def get_maxfd():
     maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
     if (maxfd == resource.RLIM_INFINITY):
         maxfd = MAXFD
     return maxfd
 
+
 def close_on_exec(fd):
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     flags |= fcntl.FD_CLOEXEC
     fcntl.fcntl(fd, fcntl.F_SETFD, flags)
-    
+
+
 def set_non_blocking(fd):
     flags = fcntl.fcntl(fd, fcntl.F_GETFL) | os.O_NONBLOCK
     fcntl.fcntl(fd, fcntl.F_SETFL, flags)
+
 
 def close(sock):
     try:
@@ -171,14 +180,17 @@ def close(sock):
     except socket.error:
         pass
 
+
 def write_chunk(sock, data):
     chunk = "".join(("%X\r\n" % len(data), data, "\r\n"))
     sock.sendall(chunk)
-    
+
+
 def write(sock, data, chunked=False):
     if chunked:
         return write_chunk(sock, data)
     sock.sendall(data)
+
 
 def write_nonblock(sock, data, chunked=False):
     timeout = sock.gettimeout()
@@ -190,10 +202,12 @@ def write_nonblock(sock, data, chunked=False):
             sock.setblocking(1)
     else:
         return write(sock, data, chunked)
-    
+
+
 def writelines(sock, lines, chunked=False):
     for line in list(lines):
         write(sock, line, chunked)
+
 
 def write_error(sock, status_int, reason, mesg):
     html = textwrap.dedent("""\
@@ -218,9 +232,11 @@ def write_error(sock, status_int, reason, mesg):
     """) % (str(status_int), reason, len(html), html)
     write_nonblock(sock, http)
 
+
 def normalize_name(name):
-    return  "-".join([w.lower().capitalize() for w in name.split("-")])
-    
+    return "-".join([w.lower().capitalize() for w in name.split("-")])
+
+
 def import_app(module):
     parts = module.split(":", 1)
     if len(parts) == 1:
@@ -233,7 +249,7 @@ def import_app(module):
     except ImportError:
         if module.endswith(".py") and os.path.exists(module):
             raise ImportError("Failed to find application, did "
-                "you mean '%s:%s'?" % (module.rsplit(".",1)[0], obj))
+                              "you mean '%s:%s'?" % (module.rsplit(".", 1)[0], obj))
         else:
             raise
 
@@ -245,17 +261,19 @@ def import_app(module):
         raise TypeError("Application object must be callable.")
     return app
 
+
 def http_date(timestamp=None):
     """Return the current date and time formatted for a message header."""
     if timestamp is None:
         timestamp = time.time()
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(timestamp)
     s = "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
-            weekdayname[wd],
-            day, monthname[month], year,
-            hh, mm, ss)
+        weekdayname[wd],
+        day, monthname[month], year,
+        hh, mm, ss)
     return s
-    
+
+
 def to_bytestring(s):
     """ convert to bytestring an unicode """
     if not isinstance(s, basestring):
@@ -265,8 +283,10 @@ def to_bytestring(s):
     else:
         return s
 
+
 def is_hoppish(header):
     return header.lower().strip() in hop_headers
+
 
 def daemonize():
     """\
@@ -280,7 +300,7 @@ def daemonize():
 
         if os.fork():
             os._exit(0)
-        
+
         os.umask(0)
         maxfd = get_maxfd()
 
@@ -288,12 +308,13 @@ def daemonize():
         for fd in range(0, maxfd):
             try:
                 os.close(fd)
-            except OSError:	# ERROR, fd wasn't open to begin with (ignored)
+            except OSError:  # ERROR, fd wasn't open to begin with (ignored)
                 pass
-        
+
         os.open(REDIRECT_TO, os.O_RDWR)
         os.dup2(0, 1)
         os.dup2(0, 2)
+
 
 def seed():
     try:
@@ -312,8 +333,9 @@ class _Missing(object):
 
 _missing = _Missing()
 
+
 class cached_property(object):
-    
+
     def __init__(self, func, name=None, doc=None):
         self.__name__ = name or func.__name__
         self.__module__ = func.__module__

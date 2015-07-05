@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of pistil released under the MIT license. 
+# This file is part of pistil released under the MIT license.
 # See the NOTICE for more information.
 
 import errno
@@ -13,16 +13,15 @@ from pistil.workertmp import WorkerTmp
 from pistil import util
 
 DEFAULT_CONF = dict(
-    uid = os.geteuid(),
-    gid = os.getegid(),
-    umask = 0,
-    debug = False,
-    num_workers = 1,
+    uid=os.geteuid(),
+    gid=os.getegid(),
+    umask=0,
+    debug=False,
+    num_workers=1,
 )
 
 
 class PoolArbiter(Arbiter):
-
 
     _SIGNALS = map(
         lambda x: getattr(signal, "SIG%s" % x),
@@ -30,8 +29,8 @@ class PoolArbiter(Arbiter):
     )
 
     def __init__(self, args, spec=(), name=None,
-            child_type="supervisor", age=0, ppid=0,
-            timeout=30):
+                 child_type="supervisor", age=0, ppid=0,
+                 timeout=30):
 
         if not isinstance(spec, tuple):
             raise TypeError("spec should be a tuple")
@@ -43,15 +42,15 @@ class PoolArbiter(Arbiter):
 
         # set number of workers
         self.num_workers = conf.get('num_workers', 1)
-       
-        ret =  self.on_init(conf)
-        if not ret: 
+
+        ret = self.on_init(conf)
+        if not ret:
             self._SPEC = Child(*spec)
         else:
             self._SPEC = Child(*ret)
-        
+
         if name is None:
-            name =  self.__class__.__name__
+            name = self.__class__.__name__
 
         self.name = name
         self.child_type = child_type
@@ -59,24 +58,23 @@ class PoolArbiter(Arbiter):
         self.ppid = ppid
         self.timeout = timeout
 
-
         self.pid = None
         self.child_age = 0
         self.booted = False
         self.stopping = False
-        self.debug =self.conf.get("debug", False)
-        self.tmp = WorkerTmp(self.conf) 
+        self.debug = self.conf.get("debug", False)
+        self.tmp = WorkerTmp(self.conf)
 
     def update_proc_title(self):
-        util._setproctitle("arbiter [%s running %s workers]" % (self.name,  
-            self.num_workers))
+        util._setproctitle("arbiter [%s running %s workers]" % (self.name,
+                                                                self.num_workers))
 
     def on_init(self, conf):
         return None
 
     def on_init_process(self):
         self.update_proc_title()
-        
+
     def handle_ttin(self):
         """\
         SIGTTIN handling.
@@ -85,7 +83,7 @@ class PoolArbiter(Arbiter):
         self.num_workers += 1
         self.update_proc_title()
         self.manage_workers()
-    
+
     def handle_ttou(self):
         """\
         SIGTTOU handling.
@@ -98,7 +96,7 @@ class PoolArbiter(Arbiter):
         self.manage_workers()
 
     def reload(self):
-        """ 
+        """
         used on HUP
         """
 
@@ -108,12 +106,12 @@ class PoolArbiter(Arbiter):
         # spawn new workers with new app & conf
         for i in range(self.conf.get("num_workers", 1)):
             self.spawn_child(self._SPEC)
-            
+
         # set new proc_name
         util._setproctitle("master [%s]" % self.name)
-        
+
         # manage workers
-        self.manage_workers() 
+        self.manage_workers()
 
     def reap_workers(self):
         """\
@@ -124,7 +122,7 @@ class PoolArbiter(Arbiter):
                 wpid, status = os.waitpid(-1, os.WNOHANG)
                 if not wpid:
                     break
-                
+
                 # A worker said it cannot boot. We'll shutdown
                 # to avoid infinite start/stop cycles.
                 exitcode = status >> 8
@@ -138,7 +136,7 @@ class PoolArbiter(Arbiter):
 
                 child, state = child_info
                 child.tmp.close()
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.ECHILD:
                 pass
 
@@ -159,14 +157,13 @@ class PoolArbiter(Arbiter):
     def spawn_workers(self):
         """\
         Spawn new workers as needed.
-        
+
         This is where a worker process leaves the main loop
         of the master process.
         """
         for i in range(self.num_workers - len(self._WORKERS.keys())):
             self.spawn_child(self._SPEC)
-            
-    
+
     def kill_worker(self, pid, sig):
         """\
                Kill a worker
@@ -179,7 +176,7 @@ class PoolArbiter(Arbiter):
 
         try:
             os.kill(pid, sig)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.ESRCH:
                 try:
                     (child, info) = self._WORKERS.pop(pid)
@@ -187,4 +184,4 @@ class PoolArbiter(Arbiter):
                     return
                 except (KeyError, OSError):
                     return
-            raise  
+            raise

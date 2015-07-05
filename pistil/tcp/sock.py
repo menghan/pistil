@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of gunicorn released under the MIT license. 
+# This file is part of gunicorn released under the MIT license.
 # See the NOTICE for more information.
 
 import errno
@@ -14,24 +14,25 @@ from pistil import util
 
 log = logging.getLogger(__name__)
 
+
 class BaseSocket(object):
-    
+
     def __init__(self, conf, fd=None):
         self.conf = conf
         self.address = util.parse_address(conf.get('address',
-            ('127.0.0.1', 8000)))
+                                                   ('127.0.0.1', 8000)))
         if fd is None:
             sock = socket.socket(self.FAMILY, socket.SOCK_STREAM)
         else:
             sock = socket.fromfd(fd, self.FAMILY, socket.SOCK_STREAM)
         self.sock = self.set_options(sock, bound=(fd is not None))
-    
+
     def __str__(self, name):
         return "<socket %d>" % self.sock.fileno()
-    
+
     def __getattr__(self, name):
         return getattr(self.sock, name)
-    
+
     def set_options(self, sock, bound=False):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if not bound:
@@ -39,28 +40,30 @@ class BaseSocket(object):
         sock.setblocking(0)
         sock.listen(self.conf.get('backlog', 2048))
         return sock
-        
+
     def bind(self, sock):
         sock.bind(self.address)
-        
+
     def close(self):
         try:
             self.sock.close()
-        except socket.error, e:
+        except socket.error as e:
             log.info("Error while closing socket %s", str(e))
         time.sleep(0.3)
         del self.sock
 
+
 class TCPSocket(BaseSocket):
-    
+
     FAMILY = socket.AF_INET
-    
+
     def __str__(self):
         return "http://%s:%d" % self.sock.getsockname()
-    
+
     def set_options(self, sock, bound=False):
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         return super(TCPSocket, self).set_options(sock, bound=bound)
+
 
 class TCP6Socket(TCPSocket):
 
@@ -70,10 +73,11 @@ class TCP6Socket(TCPSocket):
         (host, port, fl, sc) = self.sock.getsockname()
         return "http://[%s]:%d" % (host, port)
 
+
 class UnixSocket(BaseSocket):
-    
+
     FAMILY = socket.AF_UNIX
-    
+
     def __init__(self, conf, fd=None):
         if fd is None:
             try:
@@ -81,20 +85,21 @@ class UnixSocket(BaseSocket):
             except OSError:
                 pass
         super(UnixSocket, self).__init__(conf, fd=fd)
-    
+
     def __str__(self):
         return "unix:%s" % self.address
-        
+
     def bind(self, sock):
         old_umask = os.umask(self.conf.get("umask", 0))
         sock.bind(self.address)
         util.chown(self.address, self.conf.get("uid", os.geteuid()),
-                self.conf.get("gid", os.getegid()))
+                   self.conf.get("gid", os.getegid()))
         os.umask(old_umask)
-        
+
     def close(self):
         super(UnixSocket, self).close()
         os.unlink(self.address)
+
 
 def create_socket(conf):
     """
@@ -105,7 +110,7 @@ def create_socket(conf):
     """
     # get it only once
     addr = conf.get("address", ('127.0.0.1', 8000))
-    
+
     if isinstance(addr, tuple):
         if util.is_ipv6(addr[0]):
             sock_type = TCP6Socket
@@ -120,7 +125,7 @@ def create_socket(conf):
         fd = int(os.environ.pop('PISTIL_FD'))
         try:
             return sock_type(conf, fd=fd)
-        except socket.error, e:
+        except socket.error as e:
             if e[0] == errno.ENOTCONN:
                 log.error("PISTIL_FD should refer to an open socket.")
             else:
@@ -129,11 +134,11 @@ def create_socket(conf):
     # If we fail to create a socket from GUNICORN_FD
     # we fall through and try and open the socket
     # normally.
-    
+
     for i in range(5):
         try:
             return sock_type(conf)
-        except socket.error, e:
+        except socket.error as e:
             if e[0] == errno.EADDRINUSE:
                 log.error("Connection in use: %s", str(addr))
             if e[0] == errno.EADDRNOTAVAIL:
@@ -142,7 +147,6 @@ def create_socket(conf):
             if i < 5:
                 log.error("Retrying in 1 second.")
                 time.sleep(1)
-          
+
     log.error("Can't connect to %s", str(addr))
     sys.exit(1)
-

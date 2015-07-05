@@ -28,7 +28,7 @@ class AMQPWorker(Worker):
         {'routing_key': 'test',
          'name': 'test',
          'handler': 'handle_test'
-        }
+         }
     ]
 
     _connection = None

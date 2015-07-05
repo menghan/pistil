@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of pistil released under the MIT license. 
+# This file is part of pistil released under the MIT license.
 # See the NOTICE for more information.
 
 from __future__ import with_statement
@@ -18,21 +18,21 @@ from pistil.workertmp import WorkerTmp
 
 log = logging.getLogger(__name__)
 
+
 class Worker(object):
-    
+
     _SIGNALS = map(
         lambda x: getattr(signal, "SIG%s" % x),
         "HUP QUIT INT TERM USR1 USR2 WINCH CHLD".split()
     )
-    
+
     _PIPE = []
 
-
-    def __init__(self, conf, name=None, child_type="worker", 
-            age=0, ppid=0, timeout=30):
+    def __init__(self, conf, name=None, child_type="worker",
+                 age=0, ppid=0, timeout=30):
 
         if name is None:
-            name =  self.__class__.__name__
+            name = self.__class__.__name__
         self.name = name
 
         self.child_type = child_type
@@ -41,18 +41,16 @@ class Worker(object):
         self.timeout = timeout
         self.conf = conf
 
-
         # initialize
         self.booted = False
         self.alive = True
-        self.debug =self.conf.get("debug", False)
+        self.debug = self.conf.get("debug", False)
         self.tmp = WorkerTmp(self.conf)
 
         self.on_init(self.conf)
 
     def on_init(self, conf):
         pass
-
 
     def pid(self):
         return os.getpid()
@@ -66,7 +64,6 @@ class Worker(object):
         """
         self.tmp.notify()
 
-    
     def handle(self):
         raise NotImplementedError
 
@@ -93,7 +90,7 @@ class Worker(object):
         loop is initiated.
         """
         util.set_owner_process(self.conf.get("uid", os.geteuid()),
-                self.conf.get("gid", os.getegid()))
+                               self.conf.get("gid", os.getegid()))
 
         # Reseed the random number generator
         util.seed()
@@ -102,11 +99,11 @@ class Worker(object):
         self._PIPE = os.pipe()
         map(util.set_non_blocking, self._PIPE)
         map(util.close_on_exec, self._PIPE)
-        
+
         # Prevent fd inherientence
         util.close_on_exec(self.tmp.fileno())
         self.init_signals()
-        
+
         self.on_init_process()
 
         # Enter main run loop
@@ -119,14 +116,14 @@ class Worker(object):
         signal.signal(signal.SIGTERM, self.handle_exit)
         signal.signal(signal.SIGINT, self.handle_exit)
         signal.signal(signal.SIGWINCH, self.handle_winch)
-            
+
     def handle_quit(self, sig, frame):
         self.alive = False
 
     def handle_exit(self, sig, frame):
         self.alive = False
         sys.exit(0)
-        
+
     def handle_winch(self, sig, fname):
         # Ignore SIGWINCH in worker. Fixes a crash on OpenBSD.
         return

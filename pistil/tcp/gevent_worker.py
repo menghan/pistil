@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of pistil released under the MIT license. 
+# This file is part of pistil released under the MIT license.
 # See the NOTICE for more information.
 
 from __future__ import with_statement
@@ -20,7 +20,7 @@ from gevent.pool import Pool
 from gevent.server import StreamServer
 
 from pistil import util
-from pistil.tcp.sync_worker import TcpSyncWorker 
+from pistil.tcp.sync_worker import TcpSyncWorker
 
 # workaround on osx, disable kqueue
 if sys.platform == "darwin":
@@ -28,6 +28,7 @@ if sys.platform == "darwin":
 
 
 class PStreamServer(StreamServer):
+
     def __init__(self, listener, handle, spawn='default', worker=None):
         StreamServer.__init__(self, listener, spawn=spawn)
         self.handle_func = handle
@@ -43,16 +44,16 @@ class PStreamServer(StreamServer):
 class TcpGeventWorker(TcpSyncWorker):
 
     def on_init(self, conf):
-        self.worker_connections = conf.get("worker_connections", 
-                10000)
+        self.worker_connections = conf.get("worker_connections",
+                                           10000)
         self.pool = Pool(self.worker_connections)
 
     def run(self):
         self.socket.setblocking(1)
-        
+
         # start gevent stream server
         server = PStreamServer(self.socket, self.handle, spawn=self.pool,
-                worker=self)
+                               worker=self)
         server.start()
 
         try:
@@ -61,9 +62,9 @@ class TcpGeventWorker(TcpSyncWorker):
                 if self.ppid != os.getppid():
                     log.info("Parent changed, shutting down: %s", self)
                     break
-        
+
                 gevent.sleep(1.0)
-                
+
         except KeyboardInterrupt:
             pass
 
@@ -74,13 +75,11 @@ class TcpGeventWorker(TcpSyncWorker):
         except:
             pass
 
-
     if hasattr(gevent.core, 'dns_shutdown'):
 
         def init_process(self):
-            #gevent 0.13 and older doesn't reinitialize dns for us after forking
-            #here's the workaround
+            # gevent 0.13 and older doesn't reinitialize dns for us after forking
+            # here's the workaround
             gevent.core.dns_shutdown(fail_requests=1)
             gevent.core.dns_init()
             super(TcpGeventWorker, self).init_process()
-

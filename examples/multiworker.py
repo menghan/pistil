@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of pistil released under the MIT license. 
+# This file is part of pistil released under the MIT license.
 # See the NOTICE for more information.
 
 from pistil.arbiter import Arbiter
@@ -9,8 +9,9 @@ from pistil.worker import Worker
 
 class MyWorker(Worker):
 
-    def handle(self): 
+    def handle(self):
         print "hello worker 1 from %s" % self.name
+
 
 class MyWorker2(Worker):
 

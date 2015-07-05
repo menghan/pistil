@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of gunicorn released under the MIT license. 
+# This file is part of gunicorn released under the MIT license.
 # See the NOTICE for more information.
 
 import mimetypes
@@ -30,6 +30,7 @@ except ImportError:
     except ImportError:
         sendfile = None
 
+
 def write_error(sock, status_int, reason, mesg):
     html = textwrap.dedent("""\
     <html>
@@ -54,7 +55,6 @@ def write_error(sock, status_int, reason, mesg):
     write_nonblock(sock, http)
 
 
-
 class HttpWorker(TcpGeventWorker):
 
     def handle(self, sock, addr):
@@ -64,10 +64,10 @@ class HttpWorker(TcpGeventWorker):
 
         if not path or path == "/":
             path = "index.html"
-        
+
         if path.startswith("/"):
             path = path[1:]
-        
+
         real_path = os.path.join(CURDIR, "static", path)
 
         if os.path.isdir(real_path):
@@ -77,7 +77,7 @@ class HttpWorker(TcpGeventWorker):
                 lines.append("<li><a href=" + d + ">" + d + "</a>")
 
             data = "".join(lines)
-            resp = "".join(["HTTP/1.1 200 OK\r\n", 
+            resp = "".join(["HTTP/1.1 200 OK\r\n",
                             "Content-Type: text/html\r\n",
                             "Content-Length:" + str(len(data)) + "\r\n",
                             "Connection: close\r\n\r\n",
@@ -94,11 +94,11 @@ class HttpWorker(TcpGeventWorker):
                 try:
                     f = open(real_path, 'rb')
                     data = f.read()
-                    resp = "".join(["HTTP/1.1 200 OK\r\n", 
-                                "Content-Type: " + ctype + "\r\n",
-                                "Content-Length:" + str(len(data)) + "\r\n",
-                                "Connection: close\r\n\r\n",
-                                data])
+                    resp = "".join(["HTTP/1.1 200 OK\r\n",
+                                    "Content-Type: " + ctype + "\r\n",
+                                    "Content-Length:" + str(len(data)) + "\r\n",
+                                    "Connection: close\r\n\r\n",
+                                    data])
                     sock.sendall(resp)
                 finally:
                     f.close()
@@ -107,12 +107,12 @@ class HttpWorker(TcpGeventWorker):
                 try:
                     f = open(real_path, 'r')
                     clen = int(os.fstat(f.fileno())[6])
-                    
+
                     # send headers
-                    sock.send("".join(["HTTP/1.1 200 OK\r\n", 
-                                "Content-Type: " + ctype + "\r\n",
-                                "Content-Length:" + str(clen) + "\r\n",
-                                 "Connection: close\r\n\r\n"]))
+                    sock.send("".join(["HTTP/1.1 200 OK\r\n",
+                                       "Content-Type: " + ctype + "\r\n",
+                                       "Content-Length:" + str(clen) + "\r\n",
+                                       "Connection: close\r\n\r\n"]))
 
                     if not sendfile:
                         while True:
@@ -126,10 +126,9 @@ class HttpWorker(TcpGeventWorker):
                         sent = 0
                         offset = 0
                         nbytes = clen
-                        sent += sendfile(sockno, fileno, offset+sent, nbytes-sent)
+                        sent += sendfile(sockno, fileno, offset + sent, nbytes - sent)
                         while sent != nbytes:
-                            sent += sendfile(sock.fileno(), fileno, offset+sent, nbytes-sent)
-
+                            sent += sendfile(sock.fileno(), fileno, offset + sent, nbytes - sent)
 
                 finally:
                     f.close()
@@ -139,7 +138,7 @@ def main():
     conf = {"address": ("127.0.0.1", 5000), "debug": True,
             "num_workers": 3}
     spec = (HttpWorker, 30, "send_file", {}, "worker",)
-    
+
     arbiter = TcpArbiter(conf, spec)
     arbiter.run()
 
