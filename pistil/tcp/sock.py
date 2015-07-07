@@ -131,7 +131,7 @@ def create_socket(conf):
             else:
                 raise
 
-    # If we fail to create a socket from GUNICORN_FD
+    # If we fail to create a socket from PISTIL_FD
     # we fall through and try and open the socket
     # normally.
 
