@@ -25,7 +25,7 @@ class GreenletWorker(Worker):
                     log.info("Parent changed, shutting down: %s", self)
                     break
                 gevent.sleep(1.0)
-        except KeyboardInterrupt:
+        except:
             pass
         try:
             self.notify()
