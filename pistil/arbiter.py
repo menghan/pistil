@@ -350,20 +350,11 @@ class Arbiter(object):
         # exec on reload hook
         self.on_reload()
 
-        OLD__WORKERS = self._WORKERS.copy()
-
-        # don't kill
-        to_reload = []
-
-        # spawn new workers with new app & conf
-        for child in self._CHILDREN_SPECS:
-            if child.child_type != "supervisor":
-                to_reload.append(child)
-
         # set new proc_name
         util._setproctitle("arbiter [%s]" % self.name)
 
         # kill old workers
+        OLD__WORKERS = self._WORKERS.copy()
         for wpid, (child, state) in OLD__WORKERS.items():
             if state and child.timeout is not None:
                 if child.child_type == "supervisor":

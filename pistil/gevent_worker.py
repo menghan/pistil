@@ -10,10 +10,13 @@ log = logging.getLogger(__name__)
 
 class GreenletWorker(Worker):
 
+    def __str__(self):
+        return 'Worker[%d] %s' % (self.pid, self.name)
+
     def on_init_process(self):
         Worker.on_init_process(self)
-        n = 5
-        self.greenlets = [gevent.Greenlet(run=self.greenlet_run) for i in xrange(n)]
+        num_greenlets = self.conf.get('num_greenlets', 1)
+        self.greenlets = [gevent.Greenlet(run=self.greenlet_run) for i in xrange(num_greenlets)]
 
     def run(self):
         for greenlet in self.greenlets:
@@ -24,34 +27,38 @@ class GreenletWorker(Worker):
                 if self.ppid != os.getppid():
                     log.info("Parent changed, shutting down: %s", self)
                     break
+                if all(greenlet.ready() for greenlet in self.greenlets):
+                    log.info("All greenlets finished, shutting down: %s", self)
+                    break
                 gevent.sleep(1.0)
         except:
             pass
         try:
             self.notify()
-            self.stop(timeout=self.timeout)
+            for greenlet in self.greenlets:
+                gevent.spawn(stop_greenlet, greenlet, self.timeout)
+            gevent.joinall(self.greenlets)
         except:
             pass
 
-    def greenlet_stop(self, greenlet, timeout):
-        greenlet.join(timeout=timeout)
-        if not greenlet.dead:
-            greenlet.kill()
-
-    def stop(self, timeout):
         for greenlet in self.greenlets:
-            gevent.spawn(self.greenlet_stop, greenlet, self.timeout)
-        gevent.joinall(self.greenlets)
+            greenlet.get()
 
     def work(self):
-        n = 3
-        print self.pid, 'begin sleep %d seconds' % n
-        gevent.sleep(n)
-        print self.pid, 'end sleep %d seconds' % n
+        raise NotImplementedError
 
     def greenlet_run(self):
         while self.alive:
             try:
                 self.work()
+            except StopIteration:
+                log.info('%s greenlet exit loop' % self)
+                break
             except Exception as e:
-                print >> sys.stderr, '[%s] Uncaught exception: %s' % (self, e)
+                log.exception('%s Uncaught exception: %s' % (self, e))
+
+
+def stop_greenlet(greenlet, timeout):
+    greenlet.join(timeout)
+    if not greenlet.ready():
+        greenlet.kill()
