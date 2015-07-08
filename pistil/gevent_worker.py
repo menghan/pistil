@@ -1,5 +1,4 @@
 import os
-import sys
 import logging
 
 import gevent
@@ -8,16 +7,15 @@ from pistil.worker import Worker
 log = logging.getLogger(__name__)
 
 
-class GreenletWorker(Worker):
+class GreenletsArbiterWorker(Worker):
 
     def __str__(self):
-        return 'Worker[%d] %s' % (self.pid, self.name)
+        return 'GreenletsArbiterWorker [%d] %s' % (self.pid, self.name)
 
     def on_init_process(self):
         Worker.on_init_process(self)
         num_greenlets = self.conf.get('num_greenlets', 1)
         greenlet_class = self.conf.get('greenlet_class', gevent.Greenlet)
-        self.conf['run'] = self.greenlet_run
         self.greenlets = [greenlet_class(**self.conf) for i in xrange(num_greenlets)]
 
     def run(self):
@@ -46,21 +44,9 @@ class GreenletWorker(Worker):
         for greenlet in self.greenlets:
             greenlet.get()
 
-    def work(self):
-        raise NotImplementedError
-
-    def greenlet_run(self):
-        while self.alive:
-            try:
-                self.work()
-            except StopIteration:
-                log.info('%s greenlet exit loop' % self)
-                break
-            except Exception as e:
-                log.exception('%s Uncaught exception: %s' % (self, e))
-
 
 def stop_greenlet(greenlet, timeout):
+    greenlet.alive = False
     greenlet.join(timeout)
     if not greenlet.ready():
         greenlet.kill()
