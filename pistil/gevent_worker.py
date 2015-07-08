@@ -16,7 +16,9 @@ class GreenletWorker(Worker):
     def on_init_process(self):
         Worker.on_init_process(self)
         num_greenlets = self.conf.get('num_greenlets', 1)
-        self.greenlets = [gevent.Greenlet(run=self.greenlet_run) for i in xrange(num_greenlets)]
+        greenlet_class = self.conf.get('greenlet_class', gevent.Greenlet)
+        self.conf['run'] = self.greenlet_run
+        self.greenlets = [greenlet_class(**self.conf) for i in xrange(num_greenlets)]
 
     def run(self):
         for greenlet in self.greenlets:
